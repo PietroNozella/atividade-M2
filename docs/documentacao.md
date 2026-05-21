@@ -2,7 +2,7 @@
 
 ## 1. Objetivo
 
-O projeto implementa uma residencia inteligente simulada no Wokwi com ESP32 programado em MicroPython. A solucao integra sensores, atuadores, display OLED, MQTT, dashboard Node-RED, pagina web embarcada, registro em Google Sheets e envio de e-mail em situacoes de alerta.
+O projeto implementa uma residencia inteligente simulada no Wokwi com ESP32 programado em MicroPython. A solucao integra sensores, atuadores, display OLED, MQTT, dashboard Node-RED, registro em Google Sheets e envio de e-mail em situacoes de alerta.
 
 ## 2. Componentes
 
@@ -37,9 +37,8 @@ O ESP32 executa um loop principal simples:
 4. Le os sensores periodicamente.
 5. Publica leituras em topicos MQTT individuais e em um topico JSON consolidado.
 6. Recebe comandos MQTT para os atuadores.
-7. Atende uma pagina web embarcada com botoes de controle.
-8. Atualiza o OLED com dados dos sensores, horario e estados dos atuadores.
-9. Publica alertas quando alguma condicao de risco e detectada.
+7. Atualiza o OLED com dados dos sensores, horario e estados dos atuadores.
+8. Publica alertas quando alguma condicao de risco e detectada.
 
 ## 4. Comunicacao MQTT
 
@@ -71,20 +70,9 @@ Cada atuador escuta apenas o seu proprio topico. Isso evita que um comando da lu
 - `casa/atuadores/portao/status`
 - `casa/atuadores/alarme/status`
 
-Sempre que um atuador muda, o ESP32 publica o estado atualizado. Assim, Node-RED e pagina web conseguem refletir o estado real.
+Sempre que um atuador muda, o ESP32 publica o estado atualizado. Assim, o Node-RED consegue refletir o estado real.
 
-## 5. Pagina Web Embarcada
-
-O ESP32 cria um servidor HTTP na porta 80. A pagina possui botoes individuais para:
-
-- ligar/desligar luz da sala;
-- ligar/desligar luz do quarto;
-- abrir/fechar portao;
-- ligar/desligar alarme.
-
-A pagina tambem consulta `/api/status` para exibir sensores e atuadores em formato JSON.
-
-## 6. Dashboard Node-RED
+## 5. Dashboard Node-RED
 
 O arquivo `node-red-flow.json` contem:
 
@@ -94,9 +82,9 @@ O arquivo `node-red-flow.json` contem:
 - inscricao nos topicos MQTT;
 - envio de comandos MQTT para o ESP32.
 
-O dashboard permite acompanhar a residencia em tempo real e controlar os atuadores sem acessar diretamente a pagina embarcada.
+O dashboard permite acompanhar a residencia em tempo real e controlar os atuadores pelo fluxo MQTT.
 
-## 7. Google Sheets e E-mail
+## 6. Google Sheets e E-mail
 
 O registro no Google Sheets e feito pelo Node-RED, usando um node HTTP Request apontando para um Web App do Google Apps Script.
 O arquivo `docs/google-apps-script.js` traz um exemplo simples de script para publicar como Web App.
@@ -110,7 +98,7 @@ O fluxo possui dois tipos de registro:
 O envio de e-mail tambem e feito no Node-RED. Quando um alerta chega pelo MQTT, o fluxo monta uma mensagem e envia pelo node de e-mail configurado com SMTP. Alem disso, o fluxo envia um relatorio diario as 08:53 com o ultimo status consolidado dos sensores e atuadores.
 O destinatario configurado no fluxo e `nozellasoneto@gmail.com`; usuario e senha de app devem ser preenchidos nas credenciais do Node-RED.
 
-## 8. Regras de Alerta
+## 7. Regras de Alerta
 
 O ESP32 publica alerta quando:
 
@@ -120,7 +108,7 @@ O ESP32 publica alerta quando:
 
 Para evitar excesso de mensagens, ha um intervalo minimo de 60 segundos entre publicacoes de alerta.
 
-## 9. Organizacao do Codigo
+## 8. Organizacao do Codigo
 
 O codigo foi dividido em funcoes pequenas:
 
@@ -130,11 +118,10 @@ O codigo foi dividido em funcoes pequenas:
 - controle de atuadores;
 - publicacao de estados;
 - verificacao de alertas;
-- atualizacao do OLED;
-- atendimento HTTP.
+- atualizacao do OLED.
 
 Essa organizacao facilita testes incrementais e evita misturar logica de sensores, atuadores e comunicacao.
 
-## 10. Conclusao
+## 9. Conclusao
 
-O projeto atende aos requisitos principais da atividade ao combinar sensoriamento, atuacao, comunicacao MQTT bidirecional, interface web local, dashboard remoto, registro em planilha e notificacao por e-mail. A arquitetura foi mantida simples para priorizar funcionamento no Wokwi e facilitar manutencao.
+O projeto atende aos requisitos principais da atividade ao combinar sensoriamento, atuacao, comunicacao MQTT bidirecional, dashboard Node-RED, registro em planilha e notificacao por e-mail. A arquitetura foi mantida simples para priorizar funcionamento no Wokwi e facilitar manutencao.

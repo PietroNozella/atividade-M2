@@ -7,11 +7,8 @@
 ![Node-RED](https://img.shields.io/badge/Node--RED-8F0000?style=for-the-badge&logo=nodered&logoColor=white)
 ![Google Sheets](https://img.shields.io/badge/Google%20Sheets-34A853?style=for-the-badge&logo=googlesheets&logoColor=white)
 ![Google Apps Script](https://img.shields.io/badge/Apps%20Script-4285F4?style=for-the-badge&logo=googleappsscript&logoColor=white)
-![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
-![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css&logoColor=white)
-![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
 
-Projeto acadêmico individual de IoT residencial usando ESP32 no Wokwi, MicroPython, MQTT, Node-RED, dashboard, página web embarcada, Google Sheets e envio de e-mail.
+Projeto acadêmico individual de IoT residencial usando ESP32 no Wokwi, MicroPython, MQTT, Node-RED, dashboard, Google Sheets e envio de e-mail.
 
 ## Stack utilizada
 
@@ -24,7 +21,6 @@ Projeto acadêmico individual de IoT residencial usando ESP32 no Wokwi, MicroPyt
 - Google Sheets
 - Google Apps Script
 - SMTP/Gmail
-- HTML, CSS e JavaScript embarcados no ESP32
 
 ## Arquivos
 
@@ -34,7 +30,11 @@ Projeto acadêmico individual de IoT residencial usando ESP32 no Wokwi, MicroPyt
 - `wokwi.toml`: configuração da simulação.
 - `node-red-flow.json`: fluxo importável no Node-RED.
 - `docs/documentacao.md`: documentação acadêmica.
+- `docs/google-apps-script.js`: exemplo do Web App usado para registrar dados no Google Sheets.
+- `docs/prints/`: evidências visuais do projeto funcionando.
 - `config.example.py`: exemplo opcional para sobrescrever Wi-Fi, MQTT e fuso horário.
+- `upload-cursor.ps1` e `upload-files-direct.py`: envio dos arquivos para o simulador pelo Cursor.
+- `ESP32_GENERIC-20251209-v1.27.0.bin`: firmware MicroPython usado pelo Wokwi local.
 
 ## Hardware simulado
 
@@ -58,8 +58,7 @@ Atuadores:
 1. Abra a pasta do projeto no Wokwi.
 2. Inicie a simulação.
 3. Aguarde o serial mostrar o IP do ESP32.
-4. Use a página web em `http://IP_DO_ESP32`.
-5. Altere os sensores no Wokwi para ver publicações MQTT, OLED e alertas.
+4. Altere os sensores no Wokwi para ver publicações MQTT, OLED e alertas no Node-RED.
 
 O `wokwi.toml` aponta para o firmware MicroPython local em `ESP32_GENERIC-20251209-v1.27.0.bin`, formato esperado pela extensão do Wokwi no Cursor.
 
@@ -79,9 +78,7 @@ python -m pip install --force-reinstall mpremote==1.27.0
 .\upload-cursor.ps1
 ```
 
-4. Acesse a página local pelo navegador em `http://localhost:8180`.
-
-Se aparecer `TransportError: could not enter raw repl`, clique no terminal do Wokwi, pressione `Ctrl + C` para parar o programa e depois `Ctrl + A` para entrar no raw REPL. Volte ao terminal PowerShell e rode `.\upload-cursor.ps1` novamente. Depois do upload, pare e inicie novamente a simulação Wokwi para executar o `main.py`.
+Se o envio travar ou o prompt nao responder, clique no terminal do Wokwi, pressione `Ctrl + C` para parar o programa e depois `Ctrl + B` para voltar ao REPL normal. Quando aparecer `>>>`, volte ao PowerShell e rode `.\upload-cursor.ps1` novamente.
 
 No Cursor/VS Code, o simulador inicia apenas o firmware MicroPython. Por isso, sempre que reiniciar a simulação, rode `.\upload-cursor.ps1` novamente para enviar os arquivos e iniciar o `main.py`.
 

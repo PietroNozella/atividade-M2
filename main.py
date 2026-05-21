@@ -1,4 +1,3 @@
-import socket
 import time
 from machine import ADC, PWM, Pin, SoftI2C, unique_id
 import dht
@@ -76,7 +75,6 @@ PIN_OLED_SCL = 22
 PUBLICAR_SENSORES_MS = 5000
 ATUALIZAR_OLED_MS = 1000
 TENTAR_MQTT_MS = 15000
-TENTAR_WEB_SERVER_MS = 15000
 INTERVALO_ALERTA_MS = 60000
 SINCRONIZAR_RELOGIO_MS = 6 * 60 * 60 * 1000
 VOLUME_ALARME = 80
@@ -127,7 +125,6 @@ except Exception as erro:
 
 wifi = network.WLAN(network.STA_IF)
 mqtt = None
-web_server = None
 
 sensores = {
     "temperatura": 0,
@@ -147,7 +144,6 @@ atuadores = {
 ultimo_envio_sensores = 0
 ultima_atualizacao_oled = 0
 ultima_tentativa_mqtt = 0
-ultima_tentativa_web_server = 0
 ultimo_alerta = 0
 ultima_sincronizacao_relogio = 0
 data_hora = "--"
@@ -345,29 +341,6 @@ def conectar_mqtt():
         print("Falha no MQTT:", erro)
 
 
-def iniciar_web_server():
-    global web_server, ultima_tentativa_web_server
-    if web_server or not wifi.isconnected():
-        return
-
-    agora = time.ticks_ms()
-    if time.ticks_diff(agora, ultima_tentativa_web_server) < TENTAR_WEB_SERVER_MS:
-        return
-
-    ultima_tentativa_web_server = agora
-
-    try:
-        web_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        web_server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        web_server.bind(("0.0.0.0", 80))
-        web_server.listen(1)
-        web_server.setblocking(False)
-        print("Pagina web em http://%s" % wifi.ifconfig()[0])
-    except OSError as erro:
-        web_server = None
-        print("Falha ao iniciar web server:", erro)
-
-
 def ler_sensores():
     try:
         dht_sensor.measure()
@@ -449,122 +422,6 @@ def atualizar_oled():
     oled.show()
 
 
-def pagina_html():
-    sala = "ON" if atuadores["luz_sala"] else "OFF"
-    quarto = "ON" if atuadores["luz_quarto"] else "OFF"
-    alarme = "ON" if atuadores["alarme"] else "OFF"
-    portao = atuadores["portao"]
-
-    return """<!doctype html>
-<html lang="pt-BR">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Casa IoT ESP32</title>
-  <style>
-    body{font-family:Arial,sans-serif;margin:0;background:#f4f7fb;color:#172033}
-    main{max-width:760px;margin:auto;padding:24px}
-    section{background:white;border:1px solid #d9e1ec;border-radius:8px;padding:18px;margin:14px 0}
-    button{padding:12px 14px;margin:4px;border:0;border-radius:6px;background:#1769e0;color:white;font-weight:700}
-    .off{background:#5d6675}.danger{background:#c62828}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
-    code{display:block;background:#eef2f8;padding:10px;border-radius:6px;white-space:pre-wrap}
-  </style>
-</head>
-<body>
-<main>
-  <h1>Casa IoT ESP32</h1>
-  <section>
-    <h2>Atuadores</h2>
-    <p>Sala: <strong id="st-sala">%s</strong> | Quarto: <strong id="st-quarto">%s</strong> | Portao: <strong id="st-portao">%s</strong> | Alarme: <strong id="st-alarme">%s</strong></p>
-    <div class="grid">
-      <div><button onclick="cmd('/luz_sala/on')">Sala ON</button><button class="off" onclick="cmd('/luz_sala/off')">Sala OFF</button></div>
-      <div><button onclick="cmd('/luz_quarto/on')">Quarto ON</button><button class="off" onclick="cmd('/luz_quarto/off')">Quarto OFF</button></div>
-      <div><button onclick="cmd('/portao/abrir')">Abrir</button><button class="off" onclick="cmd('/portao/fechar')">Fechar</button></div>
-      <div><button class="danger" onclick="cmd('/alarme/on')">Alarme ON</button><button class="off" onclick="cmd('/alarme/off')">Alarme OFF</button></div>
-    </div>
-  </section>
-  <section>
-    <h2>Status em tempo real</h2>
-    <code id="status">Carregando...</code>
-  </section>
-</main>
-<script>
-async function cmd(path){ await fetch(path); await atualizar(); }
-async function atualizar(){
-  const res = await fetch('/api/status');
-  const data = await res.json();
-  document.getElementById('st-sala').textContent = data.atuadores.luz_sala ? 'ON' : 'OFF';
-  document.getElementById('st-quarto').textContent = data.atuadores.luz_quarto ? 'ON' : 'OFF';
-  document.getElementById('st-portao').textContent = data.atuadores.portao;
-  document.getElementById('st-alarme').textContent = data.atuadores.alarme ? 'ON' : 'OFF';
-  document.getElementById('status').textContent = JSON.stringify(data, null, 2);
-}
-setInterval(atualizar, 3000); atualizar();
-</script>
-</body>
-</html>""" % (sala, quarto, portao, alarme)
-
-
-def resposta_http(conexao, status, content_type, body):
-    if isinstance(body, str):
-        body = body.encode()
-    header = (
-        "HTTP/1.1 %s\r\n"
-        "Content-Type: %s\r\n"
-        "Connection: close\r\n"
-        "Content-Length: %d\r\n\r\n"
-    ) % (status, content_type, len(body))
-    conexao.send(header.encode() + body)
-
-
-def executar_rota(path):
-    rotas = {
-        "/luz_sala/on": ("luz_sala", True),
-        "/luz_sala/off": ("luz_sala", False),
-        "/luz_quarto/on": ("luz_quarto", True),
-        "/luz_quarto/off": ("luz_quarto", False),
-        "/portao/abrir": ("portao", True),
-        "/portao/fechar": ("portao", False),
-        "/alarme/on": ("alarme", True),
-        "/alarme/off": ("alarme", False),
-    }
-
-    if path in rotas:
-        nome, valor = rotas[path]
-        aplicar_estado_atuador(nome, valor)
-        publicar_estado_atuador(nome)
-        return True
-    return False
-
-
-def atender_web():
-    if not web_server:
-        return
-
-    try:
-        conexao, _ = web_server.accept()
-    except OSError:
-        return
-
-    try:
-        requisicao = conexao.recv(1024).decode()
-        primeira_linha = requisicao.split("\r\n")[0]
-        path = primeira_linha.split(" ")[1]
-
-        if path == "/":
-            resposta_http(conexao, "200 OK", "text/html", pagina_html())
-        elif path == "/api/status":
-            resposta_http(conexao, "200 OK", "application/json", json.dumps(payload_status()))
-        elif executar_rota(path):
-            resposta_http(conexao, "200 OK", "application/json", json.dumps({"ok": True, "atuadores": atuadores}))
-        else:
-            resposta_http(conexao, "404 Not Found", "text/plain", "Rota nao encontrada")
-    except Exception as erro:
-        print("Erro HTTP:", erro)
-    finally:
-        conexao.close()
-
-
 def setup():
     print("Iniciando Casa IoT...")
     aplicar_estado_atuador("luz_sala", False)
@@ -573,7 +430,6 @@ def setup():
     aplicar_estado_atuador("alarme", False)
     conectar_wifi()
     sincronizar_relogio()
-    iniciar_web_server()
     conectar_mqtt()
     print("Setup finalizado")
 
@@ -590,7 +446,6 @@ while True:
         sincronizar_relogio()
 
     atualizar_data_hora()
-    iniciar_web_server()
     conectar_mqtt()
 
     if mqtt:
@@ -599,8 +454,6 @@ while True:
         except Exception as erro:
             print("Falha ao ler MQTT:", erro)
             mqtt = None
-
-    atender_web()
 
     if time.ticks_diff(agora, ultimo_envio_sensores) >= PUBLICAR_SENSORES_MS:
         ultimo_envio_sensores = agora
