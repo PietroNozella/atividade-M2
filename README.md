@@ -1,6 +1,30 @@
 # Casa IoT Residencial com ESP32
 
+![ESP32](https://img.shields.io/badge/ESP32-000000?style=for-the-badge&logo=espressif&logoColor=white)
+![MicroPython](https://img.shields.io/badge/MicroPython-2B2728?style=for-the-badge&logo=micropython&logoColor=white)
+![Wokwi](https://img.shields.io/badge/Wokwi-7D3CFF?style=for-the-badge&logo=wokwi&logoColor=white)
+![MQTT](https://img.shields.io/badge/MQTT-660066?style=for-the-badge&logo=mqtt&logoColor=white)
+![Node-RED](https://img.shields.io/badge/Node--RED-8F0000?style=for-the-badge&logo=nodered&logoColor=white)
+![Google Sheets](https://img.shields.io/badge/Google%20Sheets-34A853?style=for-the-badge&logo=googlesheets&logoColor=white)
+![Google Apps Script](https://img.shields.io/badge/Apps%20Script-4285F4?style=for-the-badge&logo=googleappsscript&logoColor=white)
+![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
+![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
+
 Projeto acadêmico individual de IoT residencial usando ESP32 no Wokwi, MicroPython, MQTT, Node-RED, dashboard, página web embarcada, Google Sheets e envio de e-mail.
+
+## Stack utilizada
+
+- ESP32
+- MicroPython
+- Wokwi
+- MQTT
+- Node-RED
+- Node-RED Dashboard
+- Google Sheets
+- Google Apps Script
+- SMTP/Gmail
+- HTML, CSS e JavaScript embarcados no ESP32
 
 ## Arquivos
 
