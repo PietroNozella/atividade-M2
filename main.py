@@ -1,0 +1,617 @@
+import socket
+import time
+from machine import ADC, PWM, Pin, SoftI2C, unique_id
+import dht
+import network
+from ubinascii import hexlify
+
+try:
+    import ujson as json
+except ImportError:
+    import json
+
+try:
+    import ntptime
+except ImportError:
+    ntptime = None
+
+try:
+    from umqtt.simple import MQTTClient
+except ImportError:
+    MQTTClient = None
+
+try:
+    from ssd1306 import SSD1306_I2C
+except ImportError:
+    SSD1306_I2C = None
+
+try:
+    import config
+except ImportError:
+    config = None
+
+
+# Wi-Fi padrao do Wokwi.
+WIFI_SSID = "Wokwi-GUEST"
+WIFI_PASSWORD = ""
+
+MQTT_BROKER = "broker.hivemq.com"
+MQTT_PORT = 1883
+MQTT_USERNAME = None
+MQTT_PASSWORD = None
+MQTT_SSL = False
+MQTT_CLIENT_ID = b"casa-iot-" + hexlify(unique_id())
+UTC_OFFSET_HOURS = -3
+
+TOPICS = {
+    "sensor_status": "casa/sensores/status",
+    "temperatura": "casa/sensores/temperatura",
+    "umidade": "casa/sensores/umidade",
+    "luminosidade": "casa/sensores/luminosidade",
+    "presenca": "casa/sensores/presenca",
+    "gas": "casa/sensores/gas",
+    "alertas": "casa/alertas",
+    "luz_sala_set": "casa/atuadores/luz_sala/set",
+    "luz_quarto_set": "casa/atuadores/luz_quarto/set",
+    "portao_set": "casa/atuadores/portao/set",
+    "alarme_set": "casa/atuadores/alarme/set",
+    "luz_sala_status": "casa/atuadores/luz_sala/status",
+    "luz_quarto_status": "casa/atuadores/luz_quarto/status",
+    "portao_status": "casa/atuadores/portao/status",
+    "alarme_status": "casa/atuadores/alarme/status",
+}
+
+# Pinos do circuito em diagram.json.
+PIN_DHT = 27
+PIN_LDR = 34
+PIN_PIR = 13
+PIN_GAS = 35
+PIN_LED_SALA = 25
+PIN_LED_QUARTO = 26
+PIN_SERVO = 18
+PIN_BUZZER = 19
+PIN_OLED_SDA = 21
+PIN_OLED_SCL = 22
+
+PUBLICAR_SENSORES_MS = 5000
+ATUALIZAR_OLED_MS = 1000
+TENTAR_MQTT_MS = 15000
+TENTAR_WEB_SERVER_MS = 15000
+INTERVALO_ALERTA_MS = 60000
+SINCRONIZAR_RELOGIO_MS = 6 * 60 * 60 * 1000
+VOLUME_ALARME = 80
+LOG_SENSORES = False
+
+if config is not None:
+    WIFI_SSID = getattr(config, "WIFI_SSID", WIFI_SSID)
+    WIFI_PASSWORD = getattr(config, "WIFI_PASSWORD", WIFI_PASSWORD)
+    MQTT_BROKER = getattr(config, "MQTT_BROKER", MQTT_BROKER)
+    MQTT_PORT = getattr(config, "MQTT_PORT", MQTT_PORT)
+    MQTT_USERNAME = getattr(config, "MQTT_USERNAME", MQTT_USERNAME)
+    MQTT_PASSWORD = getattr(config, "MQTT_PASSWORD", MQTT_PASSWORD)
+    MQTT_SSL = getattr(config, "MQTT_SSL", MQTT_SSL)
+    MQTT_CLIENT_ID = getattr(config, "MQTT_CLIENT_ID", MQTT_CLIENT_ID)
+    UTC_OFFSET_HOURS = getattr(config, "UTC_OFFSET_HOURS", UTC_OFFSET_HOURS)
+
+if isinstance(MQTT_CLIENT_ID, str):
+    MQTT_CLIENT_ID = MQTT_CLIENT_ID.encode()
+
+UTC_OFFSET_SECONDS = UTC_OFFSET_HOURS * 3600
+
+
+dht_sensor = dht.DHT22(Pin(PIN_DHT))
+ldr = ADC(Pin(PIN_LDR))
+gas = ADC(Pin(PIN_GAS))
+pir = Pin(PIN_PIR, Pin.IN)
+led_sala = Pin(PIN_LED_SALA, Pin.OUT)
+led_quarto = Pin(PIN_LED_QUARTO, Pin.OUT)
+servo = PWM(Pin(PIN_SERVO))
+servo.freq(50)
+buzzer = PWM(Pin(PIN_BUZZER))
+buzzer.freq(1000)
+
+for adc in (ldr, gas):
+    adc.atten(ADC.ATTN_11DB)
+    try:
+        adc.width(ADC.WIDTH_12BIT)
+    except AttributeError:
+        pass
+
+oled = None
+try:
+    if SSD1306_I2C:
+        i2c = SoftI2C(scl=Pin(PIN_OLED_SCL), sda=Pin(PIN_OLED_SDA))
+        oled = SSD1306_I2C(128, 64, i2c)
+except Exception as erro:
+    print("OLED indisponivel:", erro)
+
+wifi = network.WLAN(network.STA_IF)
+mqtt = None
+web_server = None
+
+sensores = {
+    "temperatura": 0,
+    "umidade": 0,
+    "luminosidade": 0,
+    "presenca": False,
+    "gas": 0,
+}
+
+atuadores = {
+    "luz_sala": False,
+    "luz_quarto": False,
+    "portao": "FECHADO",
+    "alarme": False,
+}
+
+ultimo_envio_sensores = 0
+ultima_atualizacao_oled = 0
+ultima_tentativa_mqtt = 0
+ultima_tentativa_web_server = 0
+ultimo_alerta = 0
+ultima_sincronizacao_relogio = 0
+data_hora = "--"
+
+
+def percentual_adc(adc):
+    return round((adc.read() / 4095) * 100, 1)
+
+
+def duty_pwm(pwm, duty_10bits):
+    try:
+        pwm.duty(duty_10bits)
+    except AttributeError:
+        pwm.duty_u16(int((duty_10bits / 1023) * 65535))
+
+
+def mqtt_bytes(valor):
+    if isinstance(valor, bytes):
+        return valor
+    return str(valor).encode()
+
+
+def mqtt_texto(valor):
+    if isinstance(valor, bytes):
+        return valor.decode()
+    return str(valor)
+
+
+def definir_servo(angulo):
+    duty = int(26 + (angulo / 180) * 102)
+    duty_pwm(servo, duty)
+
+
+def definir_alarme(ligado):
+    atuadores["alarme"] = ligado
+    duty_pwm(buzzer, VOLUME_ALARME if ligado else 0)
+
+
+def aplicar_estado_atuador(nome, valor):
+    if nome == "luz_sala":
+        atuadores["luz_sala"] = valor
+        led_sala.value(1 if valor else 0)
+    elif nome == "luz_quarto":
+        atuadores["luz_quarto"] = valor
+        led_quarto.value(1 if valor else 0)
+    elif nome == "portao":
+        atuadores["portao"] = "ABERTO" if valor else "FECHADO"
+        definir_servo(90 if valor else 0)
+    elif nome == "alarme":
+        definir_alarme(valor)
+
+
+def normalizar_comando(payload):
+    comando = mqtt_texto(payload).strip().upper()
+    return comando in ("1", "ON", "TRUE", "LIGAR", "ABRIR", "ABERTO")
+
+
+def formatar_data_hora(instante):
+    return "{:04d}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}".format(
+        instante[0], instante[1], instante[2], instante[3], instante[4], instante[5]
+    )
+
+
+def agora_local():
+    try:
+        return time.localtime(time.time() + UTC_OFFSET_SECONDS)
+    except Exception:
+        return time.localtime()
+
+
+def atualizar_data_hora():
+    global data_hora
+    data_hora = formatar_data_hora(agora_local())
+
+
+def sincronizar_relogio():
+    global ultima_sincronizacao_relogio
+    if ntptime is None or not wifi.isconnected():
+        return
+
+    try:
+        ntptime.settime()
+        ultima_sincronizacao_relogio = time.ticks_ms()
+        atualizar_data_hora()
+        print("Relogio sincronizado:", data_hora)
+    except Exception as erro:
+        print("Falha ao sincronizar relogio:", erro)
+
+
+def publicar(topic, payload, retain=False):
+    global mqtt
+    if not mqtt:
+        return
+
+    try:
+        mqtt.publish(mqtt_bytes(topic), mqtt_bytes(payload), retain)
+    except Exception as erro:
+        print("Falha ao publicar MQTT:", erro)
+        mqtt = None
+
+
+def publicar_estado_atuador(nome):
+    topicos = {
+        "luz_sala": TOPICS["luz_sala_status"],
+        "luz_quarto": TOPICS["luz_quarto_status"],
+        "portao": TOPICS["portao_status"],
+        "alarme": TOPICS["alarme_status"],
+    }
+
+    valor = atuadores[nome]
+    if isinstance(valor, bool):
+        valor = "ON" if valor else "OFF"
+
+    publicar(topicos[nome], valor, retain=True)
+
+
+def publicar_todos_estados():
+    for nome in atuadores:
+        publicar_estado_atuador(nome)
+
+
+def ao_receber_mqtt(topic, payload):
+    topic = mqtt_texto(topic)
+    comandos = {
+        TOPICS["luz_sala_set"]: "luz_sala",
+        TOPICS["luz_quarto_set"]: "luz_quarto",
+        TOPICS["portao_set"]: "portao",
+        TOPICS["alarme_set"]: "alarme",
+    }
+
+    if topic in comandos:
+        nome = comandos[topic]
+        aplicar_estado_atuador(nome, normalizar_comando(payload))
+        publicar_estado_atuador(nome)
+
+
+def conectar_wifi():
+    wifi.active(True)
+    if wifi.isconnected():
+        return True
+
+    print("Conectando ao Wi-Fi...")
+    wifi.connect(WIFI_SSID, WIFI_PASSWORD)
+    inicio = time.ticks_ms()
+
+    while not wifi.isconnected() and time.ticks_diff(time.ticks_ms(), inicio) < 15000:
+        time.sleep(0.2)
+
+    if wifi.isconnected():
+        print("Wi-Fi conectado:", wifi.ifconfig()[0])
+        return True
+
+    print("Wi-Fi nao conectado. Tentando novamente no loop principal.")
+    return False
+
+
+def conectar_mqtt():
+    global mqtt, ultima_tentativa_mqtt
+    agora = time.ticks_ms()
+    if mqtt or time.ticks_diff(agora, ultima_tentativa_mqtt) < TENTAR_MQTT_MS:
+        return
+
+    ultima_tentativa_mqtt = agora
+
+    if MQTTClient is None:
+        print("Biblioteca umqtt.simple indisponivel")
+        return
+
+    if not wifi.isconnected():
+        return
+
+    try:
+        cliente = MQTTClient(
+            MQTT_CLIENT_ID,
+            MQTT_BROKER,
+            port=MQTT_PORT,
+            user=mqtt_bytes(MQTT_USERNAME) if MQTT_USERNAME else None,
+            password=mqtt_bytes(MQTT_PASSWORD) if MQTT_PASSWORD else None,
+            ssl=MQTT_SSL,
+        )
+        cliente.set_callback(ao_receber_mqtt)
+        cliente.connect()
+        for topic in (
+            TOPICS["luz_sala_set"],
+            TOPICS["luz_quarto_set"],
+            TOPICS["portao_set"],
+            TOPICS["alarme_set"],
+        ):
+            cliente.subscribe(mqtt_bytes(topic))
+        mqtt = cliente
+        print("MQTT conectado:", MQTT_BROKER)
+        publicar_todos_estados()
+    except Exception as erro:
+        mqtt = None
+        print("Falha no MQTT:", erro)
+
+
+def iniciar_web_server():
+    global web_server, ultima_tentativa_web_server
+    if web_server or not wifi.isconnected():
+        return
+
+    agora = time.ticks_ms()
+    if time.ticks_diff(agora, ultima_tentativa_web_server) < TENTAR_WEB_SERVER_MS:
+        return
+
+    ultima_tentativa_web_server = agora
+
+    try:
+        web_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        web_server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        web_server.bind(("0.0.0.0", 80))
+        web_server.listen(1)
+        web_server.setblocking(False)
+        print("Pagina web em http://%s" % wifi.ifconfig()[0])
+    except OSError as erro:
+        web_server = None
+        print("Falha ao iniciar web server:", erro)
+
+
+def ler_sensores():
+    try:
+        dht_sensor.measure()
+        sensores["temperatura"] = round(dht_sensor.temperature(), 1)
+        sensores["umidade"] = round(dht_sensor.humidity(), 1)
+    except Exception as erro:
+        print("Falha ao ler DHT22:", erro)
+        pass
+
+    sensores["luminosidade"] = percentual_adc(ldr)
+    sensores["gas"] = percentual_adc(gas)
+    sensores["presenca"] = bool(pir.value())
+
+
+def payload_status():
+    return {
+        "data_hora": data_hora,
+        "sensores": sensores,
+        "atuadores": atuadores,
+        "ip": wifi.ifconfig()[0] if wifi.isconnected() else "sem-wifi",
+    }
+
+
+def publicar_sensores():
+    publicar(TOPICS["temperatura"], sensores["temperatura"])
+    publicar(TOPICS["umidade"], sensores["umidade"])
+    publicar(TOPICS["luminosidade"], sensores["luminosidade"])
+    publicar(TOPICS["presenca"], 1 if sensores["presenca"] else 0)
+    publicar(TOPICS["gas"], sensores["gas"])
+    publicar(TOPICS["sensor_status"], json.dumps(payload_status()))
+
+
+def alerta_atual():
+    alertas = []
+    if sensores["temperatura"] >= 35:
+        alertas.append("Temperatura alta")
+    if sensores["gas"] >= 70:
+        alertas.append("Nivel de gas alto")
+    if sensores["presenca"] and atuadores["alarme"]:
+        alertas.append("Movimento detectado com alarme ativo")
+    return alertas
+
+
+def verificar_alertas():
+    global ultimo_alerta
+    alertas = alerta_atual()
+    if not alertas:
+        return
+
+    agora = time.ticks_ms()
+    if time.ticks_diff(agora, ultimo_alerta) < INTERVALO_ALERTA_MS:
+        return
+
+    ultimo_alerta = agora
+    mensagem = {
+        "data_hora": data_hora,
+        "alertas": alertas,
+        "sensores": sensores,
+        "atuadores": atuadores,
+    }
+    publicar(TOPICS["alertas"], json.dumps(mensagem))
+    print("ALERTA:", ", ".join(alertas))
+
+
+def atualizar_oled():
+    if not oled:
+        return
+
+    oled.fill(0)
+    oled.text("Casa IoT", 0, 0)
+    oled.text("T:%sC U:%s%%" % (sensores["temperatura"], sensores["umidade"]), 0, 12)
+    oled.text("Luz:%s%% Gas:%s%%" % (sensores["luminosidade"], sensores["gas"]), 0, 24)
+    oled.text("PIR:%s" % ("SIM" if sensores["presenca"] else "NAO"), 0, 36)
+    oled.text("Sala:%s Q:%s" % (
+        "ON" if atuadores["luz_sala"] else "OFF",
+        "ON" if atuadores["luz_quarto"] else "OFF",
+    ), 0, 48)
+    oled.text("%s P:%s" % (data_hora[11:16], atuadores["portao"][:3]), 0, 56)
+    oled.show()
+
+
+def pagina_html():
+    sala = "ON" if atuadores["luz_sala"] else "OFF"
+    quarto = "ON" if atuadores["luz_quarto"] else "OFF"
+    alarme = "ON" if atuadores["alarme"] else "OFF"
+    portao = atuadores["portao"]
+
+    return """<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Casa IoT ESP32</title>
+  <style>
+    body{font-family:Arial,sans-serif;margin:0;background:#f4f7fb;color:#172033}
+    main{max-width:760px;margin:auto;padding:24px}
+    section{background:white;border:1px solid #d9e1ec;border-radius:8px;padding:18px;margin:14px 0}
+    button{padding:12px 14px;margin:4px;border:0;border-radius:6px;background:#1769e0;color:white;font-weight:700}
+    .off{background:#5d6675}.danger{background:#c62828}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+    code{display:block;background:#eef2f8;padding:10px;border-radius:6px;white-space:pre-wrap}
+  </style>
+</head>
+<body>
+<main>
+  <h1>Casa IoT ESP32</h1>
+  <section>
+    <h2>Atuadores</h2>
+    <p>Sala: <strong id="st-sala">%s</strong> | Quarto: <strong id="st-quarto">%s</strong> | Portao: <strong id="st-portao">%s</strong> | Alarme: <strong id="st-alarme">%s</strong></p>
+    <div class="grid">
+      <div><button onclick="cmd('/luz_sala/on')">Sala ON</button><button class="off" onclick="cmd('/luz_sala/off')">Sala OFF</button></div>
+      <div><button onclick="cmd('/luz_quarto/on')">Quarto ON</button><button class="off" onclick="cmd('/luz_quarto/off')">Quarto OFF</button></div>
+      <div><button onclick="cmd('/portao/abrir')">Abrir</button><button class="off" onclick="cmd('/portao/fechar')">Fechar</button></div>
+      <div><button class="danger" onclick="cmd('/alarme/on')">Alarme ON</button><button class="off" onclick="cmd('/alarme/off')">Alarme OFF</button></div>
+    </div>
+  </section>
+  <section>
+    <h2>Status em tempo real</h2>
+    <code id="status">Carregando...</code>
+  </section>
+</main>
+<script>
+async function cmd(path){ await fetch(path); await atualizar(); }
+async function atualizar(){
+  const res = await fetch('/api/status');
+  const data = await res.json();
+  document.getElementById('st-sala').textContent = data.atuadores.luz_sala ? 'ON' : 'OFF';
+  document.getElementById('st-quarto').textContent = data.atuadores.luz_quarto ? 'ON' : 'OFF';
+  document.getElementById('st-portao').textContent = data.atuadores.portao;
+  document.getElementById('st-alarme').textContent = data.atuadores.alarme ? 'ON' : 'OFF';
+  document.getElementById('status').textContent = JSON.stringify(data, null, 2);
+}
+setInterval(atualizar, 3000); atualizar();
+</script>
+</body>
+</html>""" % (sala, quarto, portao, alarme)
+
+
+def resposta_http(conexao, status, content_type, body):
+    if isinstance(body, str):
+        body = body.encode()
+    header = (
+        "HTTP/1.1 %s\r\n"
+        "Content-Type: %s\r\n"
+        "Connection: close\r\n"
+        "Content-Length: %d\r\n\r\n"
+    ) % (status, content_type, len(body))
+    conexao.send(header.encode() + body)
+
+
+def executar_rota(path):
+    rotas = {
+        "/luz_sala/on": ("luz_sala", True),
+        "/luz_sala/off": ("luz_sala", False),
+        "/luz_quarto/on": ("luz_quarto", True),
+        "/luz_quarto/off": ("luz_quarto", False),
+        "/portao/abrir": ("portao", True),
+        "/portao/fechar": ("portao", False),
+        "/alarme/on": ("alarme", True),
+        "/alarme/off": ("alarme", False),
+    }
+
+    if path in rotas:
+        nome, valor = rotas[path]
+        aplicar_estado_atuador(nome, valor)
+        publicar_estado_atuador(nome)
+        return True
+    return False
+
+
+def atender_web():
+    if not web_server:
+        return
+
+    try:
+        conexao, _ = web_server.accept()
+    except OSError:
+        return
+
+    try:
+        requisicao = conexao.recv(1024).decode()
+        primeira_linha = requisicao.split("\r\n")[0]
+        path = primeira_linha.split(" ")[1]
+
+        if path == "/":
+            resposta_http(conexao, "200 OK", "text/html", pagina_html())
+        elif path == "/api/status":
+            resposta_http(conexao, "200 OK", "application/json", json.dumps(payload_status()))
+        elif executar_rota(path):
+            resposta_http(conexao, "200 OK", "application/json", json.dumps({"ok": True, "atuadores": atuadores}))
+        else:
+            resposta_http(conexao, "404 Not Found", "text/plain", "Rota nao encontrada")
+    except Exception as erro:
+        print("Erro HTTP:", erro)
+    finally:
+        conexao.close()
+
+
+def setup():
+    print("Iniciando Casa IoT...")
+    aplicar_estado_atuador("luz_sala", False)
+    aplicar_estado_atuador("luz_quarto", False)
+    aplicar_estado_atuador("portao", False)
+    aplicar_estado_atuador("alarme", False)
+    conectar_wifi()
+    sincronizar_relogio()
+    iniciar_web_server()
+    conectar_mqtt()
+    print("Setup finalizado")
+
+
+setup()
+
+while True:
+    agora = time.ticks_ms()
+
+    if not wifi.isconnected():
+        if conectar_wifi():
+            sincronizar_relogio()
+    elif time.ticks_diff(agora, ultima_sincronizacao_relogio) >= SINCRONIZAR_RELOGIO_MS:
+        sincronizar_relogio()
+
+    atualizar_data_hora()
+    iniciar_web_server()
+    conectar_mqtt()
+
+    if mqtt:
+        try:
+            mqtt.check_msg()
+        except Exception as erro:
+            print("Falha ao ler MQTT:", erro)
+            mqtt = None
+
+    atender_web()
+
+    if time.ticks_diff(agora, ultimo_envio_sensores) >= PUBLICAR_SENSORES_MS:
+        ultimo_envio_sensores = agora
+        ler_sensores()
+        publicar_sensores()
+        verificar_alertas()
+        if LOG_SENSORES:
+            print("Sensores:", json.dumps(payload_status()))
+
+    if time.ticks_diff(agora, ultima_atualizacao_oled) >= ATUALIZAR_OLED_MS:
+        ultima_atualizacao_oled = agora
+        atualizar_oled()
+
+    time.sleep(0.05)

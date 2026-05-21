@@ -1,0 +1,147 @@
+{
+  "version": 1,
+  "author": "Pietro Nozella",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "wokwi-esp32-devkit-v1",
+      "id": "esp",
+      "top": 185,
+      "left": 260,
+      "attrs": {
+        "env": "micropython-20231227-v1.22.0"
+      }
+    },
+    {
+      "type": "wokwi-dht22",
+      "id": "dht1",
+      "top": 500,
+      "left": 455,
+      "attrs": {
+        "temperature": "26",
+        "humidity": "55"
+      }
+    },
+    {
+      "type": "wokwi-photoresistor-sensor",
+      "id": "ldr1",
+      "top": 350,
+      "left": 20,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-pir-motion-sensor",
+      "id": "pir1",
+      "top": 160,
+      "left": 25,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "pot1",
+      "top": 490,
+      "left": 30,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-led",
+      "id": "ledSala",
+      "top": 430,
+      "left": 500,
+      "attrs": {
+        "color": "yellow"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "rSala",
+      "top": 480,
+      "left": 500,
+      "attrs": {
+        "value": "220"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "ledQuarto",
+      "top": 360,
+      "left": 500,
+      "attrs": {
+        "color": "blue"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "rQuarto",
+      "top": 410,
+      "left": 500,
+      "attrs": {
+        "value": "220"
+      }
+    },
+    {
+      "type": "wokwi-servo",
+      "id": "servo1",
+      "top": 270,
+      "left": 500,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-buzzer",
+      "id": "buzzer1",
+      "top": 205,
+      "left": 525,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-ssd1306",
+      "id": "oled1",
+      "top": 20,
+      "left": 430,
+      "attrs": {
+        "i2cAddress": "0x3c"
+      }
+    }
+  ],
+  "connections": [
+    ["esp:TX0", "$serialMonitor:RX", "", []],
+    ["esp:RX0", "$serialMonitor:TX", "", []],
+
+    ["dht1:VCC", "esp:3V3", "red", ["v-35", "h-210", "v-300"]],
+    ["dht1:SDA", "esp:D27", "green", ["h-55", "v-30"]],
+    ["dht1:GND", "esp:GND.1", "black", ["h-85", "v-30"]],
+
+    ["ldr1:VCC", "esp:3V3", "red", ["h170", "v-190"]],
+    ["ldr1:GND", "esp:GND.1", "black", ["h185", "v-90"]],
+    ["ldr1:AO", "esp:D34", "green", ["h170"]],
+
+    ["pir1:VCC", "esp:5V", "red", ["h160", "v20"]],
+    ["pir1:OUT", "esp:D13", "green", ["h190"]],
+    ["pir1:GND", "esp:GND.1", "black", ["h170", "v95"]],
+
+    ["pot1:VCC", "esp:3V3", "red", ["h160", "v-330"]],
+    ["pot1:SIG", "esp:D35", "green", ["h165", "v-105"]],
+    ["pot1:GND", "esp:GND.1", "black", ["h190", "v-230"]],
+
+    ["ledSala:A", "esp:D25", "green", ["h-95"]],
+    ["ledSala:C", "rSala:1", "black", []],
+    ["rSala:2", "esp:GND.2", "black", ["h-120"]],
+
+    ["ledQuarto:A", "esp:D26", "green", ["h-100"]],
+    ["ledQuarto:C", "rQuarto:1", "black", []],
+    ["rQuarto:2", "esp:GND.2", "black", ["h-120"]],
+
+    ["servo1:PWM", "esp:D18", "green", ["h-95"]],
+    ["servo1:V+", "esp:5V", "red", ["h-150", "v-85"]],
+    ["servo1:GND", "esp:GND.2", "black", ["h-140", "v25"]],
+
+    ["buzzer1:1", "esp:D19", "green", ["h-115"]],
+    ["buzzer1:2", "esp:GND.2", "black", ["h-140", "v95"]],
+
+    ["oled1:VCC", "esp:3V3", "red", ["h-145", "v175"]],
+    ["oled1:GND", "esp:GND.1", "black", ["h-120", "v255"]],
+    ["oled1:SCL", "esp:D22", "green", ["h-95", "v205"]],
+    ["oled1:SDA", "esp:D21", "green", ["h-80", "v215"]]
+  ],
+  "dependencies": {}
+}

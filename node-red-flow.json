@@ -1,0 +1,876 @@
+[
+  {
+    "id": "tab-casa-iot",
+    "type": "tab",
+    "label": "Casa IoT ESP32",
+    "disabled": false,
+    "info": ""
+  },
+  {
+    "id": "mqtt-hivemq",
+    "type": "mqtt-broker",
+    "name": "HiveMQ Public Broker",
+    "broker": "broker.hivemq.com",
+    "port": "1883",
+    "clientid": "node-red-casa-iot",
+    "autoConnect": true,
+    "usetls": false,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true,
+    "birthTopic": "",
+    "birthQos": "0",
+    "birthPayload": "",
+    "closeTopic": "",
+    "closeQos": "0",
+    "closePayload": "",
+    "willTopic": "",
+    "willQos": "0",
+    "willPayload": ""
+  },
+  {
+    "id": "ui-tab-casa",
+    "type": "ui_tab",
+    "name": "Casa IoT",
+    "icon": "dashboard",
+    "disabled": false,
+    "hidden": false
+  },
+  {
+    "id": "ui-group-sensores",
+    "type": "ui_group",
+    "name": "Sensores",
+    "tab": "ui-tab-casa",
+    "order": 1,
+    "disp": true,
+    "width": "12",
+    "collapse": false,
+    "className": ""
+  },
+  {
+    "id": "ui-group-atuadores",
+    "type": "ui_group",
+    "name": "Atuadores",
+    "tab": "ui-tab-casa",
+    "order": 2,
+    "disp": true,
+    "width": "12",
+    "collapse": false,
+    "className": ""
+  },
+  {
+    "id": "ui-group-alertas",
+    "type": "ui_group",
+    "name": "Alertas",
+    "tab": "ui-tab-casa",
+    "order": 3,
+    "disp": true,
+    "width": "12",
+    "collapse": false,
+    "className": ""
+  },
+  {
+    "id": "mqtt-status",
+    "type": "mqtt in",
+    "z": "tab-casa-iot",
+    "name": "Status consolidado",
+    "topic": "casa/sensores/status",
+    "qos": "0",
+    "datatype": "json",
+    "broker": "mqtt-hivemq",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 150,
+    "y": 80,
+    "wires": [
+      [
+        "fn-salvar-status"
+      ]
+    ]
+  },
+  {
+    "id": "fn-salvar-status",
+    "type": "function",
+    "z": "tab-casa-iot",
+    "name": "Salvar ultimo status",
+    "func": "flow.set('ultimoStatus', msg.payload);\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 390,
+    "y": 80,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "mqtt-temp",
+    "type": "mqtt in",
+    "z": "tab-casa-iot",
+    "name": "Temperatura",
+    "topic": "casa/sensores/temperatura",
+    "qos": "0",
+    "datatype": "auto",
+    "broker": "mqtt-hivemq",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 140,
+    "y": 190,
+    "wires": [
+      [
+        "ui-temp"
+      ]
+    ]
+  },
+  {
+    "id": "ui-temp",
+    "type": "ui_gauge",
+    "z": "tab-casa-iot",
+    "name": "Temperatura",
+    "group": "ui-group-sensores",
+    "order": 1,
+    "width": 3,
+    "height": 3,
+    "gtype": "gage",
+    "title": "Temperatura",
+    "label": "C",
+    "format": "{{value}}",
+    "min": 0,
+    "max": "50",
+    "colors": [
+      "#00b500",
+      "#e6e600",
+      "#ca3838"
+    ],
+    "seg1": "30",
+    "seg2": "35",
+    "className": "",
+    "x": 370,
+    "y": 190,
+    "wires": []
+  },
+  {
+    "id": "mqtt-umidade",
+    "type": "mqtt in",
+    "z": "tab-casa-iot",
+    "name": "Umidade",
+    "topic": "casa/sensores/umidade",
+    "qos": "0",
+    "datatype": "auto",
+    "broker": "mqtt-hivemq",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 130,
+    "y": 240,
+    "wires": [
+      [
+        "ui-umidade"
+      ]
+    ]
+  },
+  {
+    "id": "ui-umidade",
+    "type": "ui_gauge",
+    "z": "tab-casa-iot",
+    "name": "Umidade",
+    "group": "ui-group-sensores",
+    "order": 2,
+    "width": 3,
+    "height": 3,
+    "gtype": "gage",
+    "title": "Umidade",
+    "label": "%",
+    "format": "{{value}}",
+    "min": 0,
+    "max": "100",
+    "colors": [
+      "#ca3838",
+      "#e6e600",
+      "#00b500"
+    ],
+    "seg1": "30",
+    "seg2": "60",
+    "className": "",
+    "x": 360,
+    "y": 240,
+    "wires": []
+  },
+  {
+    "id": "mqtt-luminosidade",
+    "type": "mqtt in",
+    "z": "tab-casa-iot",
+    "name": "Luminosidade",
+    "topic": "casa/sensores/luminosidade",
+    "qos": "0",
+    "datatype": "auto",
+    "broker": "mqtt-hivemq",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 150,
+    "y": 290,
+    "wires": [
+      [
+        "ui-luminosidade"
+      ]
+    ]
+  },
+  {
+    "id": "ui-luminosidade",
+    "type": "ui_gauge",
+    "z": "tab-casa-iot",
+    "name": "Luminosidade",
+    "group": "ui-group-sensores",
+    "order": 3,
+    "width": 3,
+    "height": 3,
+    "gtype": "gage",
+    "title": "Luminosidade",
+    "label": "%",
+    "format": "{{value}}",
+    "min": 0,
+    "max": "100",
+    "colors": [
+      "#5d6675",
+      "#e6e600",
+      "#00b500"
+    ],
+    "seg1": "30",
+    "seg2": "70",
+    "className": "",
+    "x": 380,
+    "y": 290,
+    "wires": []
+  },
+  {
+    "id": "mqtt-gas",
+    "type": "mqtt in",
+    "z": "tab-casa-iot",
+    "name": "Gas",
+    "topic": "casa/sensores/gas",
+    "qos": "0",
+    "datatype": "auto",
+    "broker": "mqtt-hivemq",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 120,
+    "y": 340,
+    "wires": [
+      [
+        "ui-gas"
+      ]
+    ]
+  },
+  {
+    "id": "ui-gas",
+    "type": "ui_gauge",
+    "z": "tab-casa-iot",
+    "name": "Gas",
+    "group": "ui-group-sensores",
+    "order": 4,
+    "width": 3,
+    "height": 3,
+    "gtype": "gage",
+    "title": "Gas",
+    "label": "%",
+    "format": "{{value}}",
+    "min": 0,
+    "max": "100",
+    "colors": [
+      "#00b500",
+      "#e6e600",
+      "#ca3838"
+    ],
+    "seg1": "50",
+    "seg2": "70",
+    "className": "",
+    "x": 350,
+    "y": 340,
+    "wires": []
+  },
+  {
+    "id": "mqtt-presenca",
+    "type": "mqtt in",
+    "z": "tab-casa-iot",
+    "name": "Presenca",
+    "topic": "casa/sensores/presenca",
+    "qos": "0",
+    "datatype": "auto",
+    "broker": "mqtt-hivemq",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 130,
+    "y": 390,
+    "wires": [
+      [
+        "fn-presenca"
+      ]
+    ]
+  },
+  {
+    "id": "fn-presenca",
+    "type": "function",
+    "z": "tab-casa-iot",
+    "name": "Formatar presenca",
+    "func": "msg.payload = Number(msg.payload) === 1 ? 'Presenca detectada' : 'Sem presenca';\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 370,
+    "y": 390,
+    "wires": [
+      [
+        "ui-presenca"
+      ]
+    ]
+  },
+  {
+    "id": "ui-presenca",
+    "type": "ui_text",
+    "z": "tab-casa-iot",
+    "group": "ui-group-sensores",
+    "order": 5,
+    "width": 6,
+    "height": 1,
+    "name": "Presenca",
+    "label": "Presenca",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "className": "",
+    "x": 600,
+    "y": 390,
+    "wires": []
+  },
+  {
+    "id": "sw-luz-sala",
+    "type": "ui_switch",
+    "z": "tab-casa-iot",
+    "name": "Luz sala",
+    "label": "Luz sala",
+    "tooltip": "",
+    "group": "ui-group-atuadores",
+    "order": 1,
+    "width": 3,
+    "height": 1,
+    "passthru": false,
+    "decouple": "false",
+    "topic": "",
+    "topicType": "str",
+    "style": "",
+    "onvalue": "ON",
+    "onvalueType": "str",
+    "onicon": "",
+    "oncolor": "",
+    "offvalue": "OFF",
+    "offvalueType": "str",
+    "officon": "",
+    "offcolor": "",
+    "animate": true,
+    "className": "",
+    "x": 130,
+    "y": 470,
+    "wires": [
+      [
+        "mqtt-out-luz-sala"
+      ]
+    ]
+  },
+  {
+    "id": "mqtt-out-luz-sala",
+    "type": "mqtt out",
+    "z": "tab-casa-iot",
+    "name": "Comando luz sala",
+    "topic": "casa/atuadores/luz_sala/set",
+    "qos": "",
+    "retain": "",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "mqtt-hivemq",
+    "x": 400,
+    "y": 470,
+    "wires": []
+  },
+  {
+    "id": "sw-luz-quarto",
+    "type": "ui_switch",
+    "z": "tab-casa-iot",
+    "name": "Luz quarto",
+    "label": "Luz quarto",
+    "tooltip": "",
+    "group": "ui-group-atuadores",
+    "order": 2,
+    "width": 3,
+    "height": 1,
+    "passthru": false,
+    "decouple": "false",
+    "topic": "",
+    "topicType": "str",
+    "style": "",
+    "onvalue": "ON",
+    "onvalueType": "str",
+    "onicon": "",
+    "oncolor": "",
+    "offvalue": "OFF",
+    "offvalueType": "str",
+    "officon": "",
+    "offcolor": "",
+    "animate": true,
+    "className": "",
+    "x": 140,
+    "y": 520,
+    "wires": [
+      [
+        "mqtt-out-luz-quarto"
+      ]
+    ]
+  },
+  {
+    "id": "mqtt-out-luz-quarto",
+    "type": "mqtt out",
+    "z": "tab-casa-iot",
+    "name": "Comando luz quarto",
+    "topic": "casa/atuadores/luz_quarto/set",
+    "qos": "",
+    "retain": "",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "mqtt-hivemq",
+    "x": 410,
+    "y": 520,
+    "wires": []
+  },
+  {
+    "id": "sw-portao",
+    "type": "ui_switch",
+    "z": "tab-casa-iot",
+    "name": "Portao",
+    "label": "Portao",
+    "tooltip": "",
+    "group": "ui-group-atuadores",
+    "order": 3,
+    "width": 3,
+    "height": 1,
+    "passthru": false,
+    "decouple": "false",
+    "topic": "",
+    "topicType": "str",
+    "style": "",
+    "onvalue": "ABRIR",
+    "onvalueType": "str",
+    "onicon": "",
+    "oncolor": "",
+    "offvalue": "FECHAR",
+    "offvalueType": "str",
+    "officon": "",
+    "offcolor": "",
+    "animate": true,
+    "className": "",
+    "x": 120,
+    "y": 570,
+    "wires": [
+      [
+        "mqtt-out-portao"
+      ]
+    ]
+  },
+  {
+    "id": "mqtt-out-portao",
+    "type": "mqtt out",
+    "z": "tab-casa-iot",
+    "name": "Comando portao",
+    "topic": "casa/atuadores/portao/set",
+    "qos": "",
+    "retain": "",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "mqtt-hivemq",
+    "x": 390,
+    "y": 570,
+    "wires": []
+  },
+  {
+    "id": "sw-alarme",
+    "type": "ui_switch",
+    "z": "tab-casa-iot",
+    "name": "Alarme",
+    "label": "Alarme",
+    "tooltip": "",
+    "group": "ui-group-atuadores",
+    "order": 4,
+    "width": 3,
+    "height": 1,
+    "passthru": false,
+    "decouple": "false",
+    "topic": "",
+    "topicType": "str",
+    "style": "",
+    "onvalue": "ON",
+    "onvalueType": "str",
+    "onicon": "",
+    "oncolor": "",
+    "offvalue": "OFF",
+    "offvalueType": "str",
+    "officon": "",
+    "offcolor": "",
+    "animate": true,
+    "className": "",
+    "x": 120,
+    "y": 620,
+    "wires": [
+      [
+        "mqtt-out-alarme"
+      ]
+    ]
+  },
+  {
+    "id": "mqtt-out-alarme",
+    "type": "mqtt out",
+    "z": "tab-casa-iot",
+    "name": "Comando alarme",
+    "topic": "casa/atuadores/alarme/set",
+    "qos": "",
+    "retain": "",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "mqtt-hivemq",
+    "x": 390,
+    "y": 620,
+    "wires": []
+  },
+  {
+    "id": "mqtt-alertas",
+    "type": "mqtt in",
+    "z": "tab-casa-iot",
+    "name": "Alertas",
+    "topic": "casa/alertas",
+    "qos": "0",
+    "datatype": "json",
+    "broker": "mqtt-hivemq",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 120,
+    "y": 710,
+    "wires": [
+      [
+        "fn-alertas"
+      ]
+    ]
+  },
+  {
+    "id": "fn-alertas",
+    "type": "function",
+    "z": "tab-casa-iot",
+    "name": "Preparar alerta para Sheets e e-mail",
+    "func": "const API_KEY = 'meteoro';\nconst EMAIL_FROM = 'pietrolnsousa@gmail.com';\nconst EMAIL_TO = 'nozellasoneto@gmail.com';\n\nconst alerta = msg.payload || {};\nconst texto = Array.isArray(alerta.alertas) ? alerta.alertas.join(', ') : JSON.stringify(alerta);\nconst dataHora = alerta.data_hora || new Date().toISOString();\n\nconst sheetMsg = {\n    headers: { 'Content-Type': 'application/json' },\n    payload: {\n        apiKey: API_KEY,\n        tipo: 'alerta',\n        dataHora,\n        alerta: texto,\n        dados: alerta\n    }\n};\n\nconst emailMsg = {\n    to: EMAIL_TO,\n    from: EMAIL_FROM,\n    topic: `Alerta Casa IoT - ${texto}`,\n    payload: `Alerta detectado: ${texto}\n\nData/hora: ${dataHora}\n\nDados:\n${JSON.stringify(alerta, null, 2)}`\n};\n\nmsg.payload = texto;\nreturn [msg, sheetMsg, emailMsg];",
+    "outputs": 3,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 390,
+    "y": 710,
+    "wires": [
+      [
+        "ui-alerta"
+      ],
+      [
+        "http-sheets"
+      ],
+      [
+        "email-alerta"
+      ]
+    ]
+  },
+  {
+    "id": "ui-alerta",
+    "type": "ui_text",
+    "z": "tab-casa-iot",
+    "group": "ui-group-alertas",
+    "order": 1,
+    "width": 12,
+    "height": 1,
+    "name": "Ultimo alerta",
+    "label": "Ultimo alerta",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "className": "",
+    "x": 690,
+    "y": 680,
+    "wires": []
+  },
+  {
+    "id": "inj-log-2h",
+    "type": "inject",
+    "z": "tab-casa-iot",
+    "name": "Registrar sensores a cada 2h",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "7200",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 180,
+    "y": 800,
+    "wires": [
+      [
+        "fn-log-2h"
+      ]
+    ]
+  },
+  {
+    "id": "fn-log-2h",
+    "type": "function",
+    "z": "tab-casa-iot",
+    "name": "Preparar registro 2h",
+    "func": "const API_KEY = 'meteoro';\nconst status = flow.get('ultimoStatus') || {};\n\nmsg.headers = { 'Content-Type': 'application/json' };\nmsg.payload = {\n    apiKey: API_KEY,\n    tipo: 'leitura_2h',\n    dataHora: new Date().toISOString(),\n    dados: status\n};\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 430,
+    "y": 800,
+    "wires": [
+      [
+        "http-sheets"
+      ]
+    ]
+  },
+  {
+    "id": "http-sheets",
+    "type": "http request",
+    "z": "tab-casa-iot",
+    "name": "Google Sheets - configurar URL do Apps Script",
+    "method": "POST",
+    "ret": "txt",
+    "paytoqs": "ignore",
+    "url": "https://script.google.com/macros/s/AKfycbyP8ilfftthOesG432hjpyKrMZ1fcTqmBqRuTbbwSyr6LrY7emgqaScRy0XZh7SE_wv/exec",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": true,
+    "headers": [],
+    "x": 810,
+    "y": 770,
+    "wires": [
+      [
+        "debug-sheets"
+      ]
+    ]
+  },
+  {
+    "id": "debug-sheets",
+    "type": "debug",
+    "z": "tab-casa-iot",
+    "name": "Retorno Sheets",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "true",
+    "targetType": "full",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 1110,
+    "y": 770,
+    "wires": []
+  },
+  {
+    "id": "email-alerta",
+    "type": "e-mail",
+    "z": "tab-casa-iot",
+    "server": "smtp.gmail.com",
+    "port": "465",
+    "secure": true,
+    "tls": true,
+    "name": "nozellasoneto@gmail.com",
+    "dname": "Enviar e-mail Gmail",
+    "x": 750,
+    "y": 730,
+    "wires": []
+  },
+  {
+    "id": "mqtt-status-luz-sala",
+    "type": "mqtt in",
+    "z": "tab-casa-iot",
+    "name": "Estado luz sala",
+    "topic": "casa/atuadores/luz_sala/status",
+    "qos": "0",
+    "datatype": "auto",
+    "broker": "mqtt-hivemq",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 650,
+    "y": 470,
+    "wires": [
+      [
+        "sw-luz-sala"
+      ]
+    ]
+  },
+  {
+    "id": "mqtt-status-luz-quarto",
+    "type": "mqtt in",
+    "z": "tab-casa-iot",
+    "name": "Estado luz quarto",
+    "topic": "casa/atuadores/luz_quarto/status",
+    "qos": "0",
+    "datatype": "auto",
+    "broker": "mqtt-hivemq",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 660,
+    "y": 520,
+    "wires": [
+      [
+        "sw-luz-quarto"
+      ]
+    ]
+  },
+  {
+    "id": "mqtt-status-portao",
+    "type": "mqtt in",
+    "z": "tab-casa-iot",
+    "name": "Estado portao",
+    "topic": "casa/atuadores/portao/status",
+    "qos": "0",
+    "datatype": "auto",
+    "broker": "mqtt-hivemq",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 650,
+    "y": 570,
+    "wires": [
+      [
+        "fn-status-portao"
+      ]
+    ]
+  },
+  {
+    "id": "fn-status-portao",
+    "type": "function",
+    "z": "tab-casa-iot",
+    "name": "Normalizar estado portao",
+    "func": "const valor = String(msg.payload).toUpperCase();\nmsg.payload = valor === 'ABERTO' ? 'ABRIR' : 'FECHAR';\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 890,
+    "y": 570,
+    "wires": [
+      [
+        "sw-portao"
+      ]
+    ]
+  },
+  {
+    "id": "mqtt-status-alarme",
+    "type": "mqtt in",
+    "z": "tab-casa-iot",
+    "name": "Estado alarme",
+    "topic": "casa/atuadores/alarme/status",
+    "qos": "0",
+    "datatype": "auto",
+    "broker": "mqtt-hivemq",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 650,
+    "y": 620,
+    "wires": [
+      [
+        "sw-alarme"
+      ]
+    ]
+  },
+  {
+    "id": "inj-email-diario",
+    "type": "inject",
+    "z": "tab-casa-iot",
+    "name": "Enviar relatorio diario 08:53",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "53 08 * * *",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 180,
+    "y": 850,
+    "wires": [
+      [
+        "fn-email-relatorio"
+      ]
+    ]
+  },
+  {
+    "id": "fn-email-relatorio",
+    "type": "function",
+    "z": "tab-casa-iot",
+    "name": "Preparar relatorio diario",
+    "func": "const EMAIL_FROM = 'pietrolnsousa@gmail.com';\nconst EMAIL_TO = 'nozellasoneto@gmail.com';\nconst status = flow.get('ultimoStatus') || {};\nconst sensores = status.sensores || {};\nconst atuadores = status.atuadores || {};\nconst dataHora = new Date().toISOString();\n\nmsg.to = EMAIL_TO;\nmsg.from = EMAIL_FROM;\nmsg.topic = 'Relatorio diario Casa IoT';\nmsg.payload = `Relatorio diario Casa IoT\n\nData/hora: ${dataHora}\n\nSensores:\n- Temperatura: ${sensores.temperatura ?? 'sem leitura'} C\n- Umidade: ${sensores.umidade ?? 'sem leitura'} %\n- Luminosidade: ${sensores.luminosidade ?? 'sem leitura'} %\n- Gas: ${sensores.gas ?? 'sem leitura'} %\n- Presenca: ${sensores.presenca ? 'sim' : 'nao'}\n\nAtuadores:\n- Luz sala: ${atuadores.luz_sala ? 'ON' : 'OFF'}\n- Luz quarto: ${atuadores.luz_quarto ? 'ON' : 'OFF'}\n- Portao: ${atuadores.portao ?? 'sem estado'}\n- Alarme: ${atuadores.alarme ? 'ON' : 'OFF'}\n\nDados completos:\n${JSON.stringify(status, null, 2)}`;\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 440,
+    "y": 850,
+    "wires": [
+      [
+        "email-alerta"
+      ]
+    ]
+  }
+]
