@@ -27,7 +27,7 @@ Projeto acadêmico individual de IoT residencial usando ESP32 no Wokwi, MicroPyt
 - `main.py`: firmware MicroPython do ESP32.
 - `ssd1306.py`: driver local do display OLED SSD1306.
 - `diagram.json`: circuito do Wokwi.
-- `wokwi.toml`: configuração da simulação.
+- `wokwi.toml`: configuração da simulação local.
 - `node-red-flow.json`: fluxo importável no Node-RED.
 - `docs/documentacao.md`: documentação acadêmica.
 - `docs/google-apps-script.js`: exemplo do Web App usado para registrar dados no Google Sheets.
@@ -60,14 +60,14 @@ Atuadores:
 3. Aguarde o serial mostrar o IP do ESP32.
 4. Altere os sensores no Wokwi para ver publicações MQTT, OLED e alertas no Node-RED.
 
-O `wokwi.toml` aponta para o firmware MicroPython local em `ESP32_GENERIC-20251209-v1.27.0.bin`, formato esperado pela extensão do Wokwi no Cursor.
+O `wokwi.toml` aponta para o firmware MicroPython local em `ESP32_GENERIC-20251209-v1.27.0.bin`, formato esperado pela extensão do Wokwi no Cursor. O `diagram.json` mantém a definição visual do circuito.
 
 ## Como executar no Cursor
 
-Use `mpremote` na mesma versão do firmware MicroPython:
+Instale a dependência usada pelo script de upload serial:
 
 ```powershell
-python -m pip install --force-reinstall mpremote==1.27.0
+python -m pip install pyserial
 ```
 
 1. Pare e inicie novamente o simulador pela extensão do Wokwi, para ele carregar o `wokwi.toml`.
@@ -78,7 +78,7 @@ python -m pip install --force-reinstall mpremote==1.27.0
 .\upload-cursor.ps1
 ```
 
-Se o envio travar ou o prompt nao responder, clique no terminal do Wokwi, pressione `Ctrl + C` para parar o programa e depois `Ctrl + B` para voltar ao REPL normal. Quando aparecer `>>>`, volte ao PowerShell e rode `.\upload-cursor.ps1` novamente.
+Se o envio travar ou o prompt não responder, clique no terminal do Wokwi, pressione `Ctrl + C` para parar o programa e depois `Ctrl + B` para voltar ao REPL normal. Quando aparecer `>>>`, volte ao PowerShell e rode `.\upload-cursor.ps1` novamente.
 
 No Cursor/VS Code, o simulador inicia apenas o firmware MicroPython. Por isso, sempre que reiniciar a simulação, rode `.\upload-cursor.ps1` novamente para enviar os arquivos e iniciar o `main.py`.
 

@@ -122,6 +122,40 @@ O codigo foi dividido em funcoes pequenas:
 
 Essa organizacao facilita testes incrementais e evita misturar logica de sensores, atuadores e comunicacao.
 
-## 9. Conclusao
+## 9. Execucao do Projeto
+
+Para executar o projeto no Wokwi/Cursor:
+
+1. Abrir a pasta do projeto no editor.
+2. Iniciar a simulacao Wokwi usando o circuito de `diagram.json`.
+3. Aguardar o terminal do MicroPython mostrar o prompt `>>>`.
+4. Executar `.\upload-cursor.ps1` para enviar `main.py` e `ssd1306.py` ao simulador.
+5. Confirmar no terminal que o ESP32 conectou ao Wi-Fi e ao broker MQTT.
+6. Importar `node-red-flow.json` no Node-RED.
+7. Abrir o dashboard do Node-RED e acompanhar as leituras em tempo real.
+
+Caso seja necessario alterar Wi-Fi, broker MQTT ou fuso horario, o arquivo `config.example.py` pode ser copiado para `config.py` e ajustado localmente.
+
+## 10. Validacao e Evidencias
+
+O funcionamento pode ser validado pelo fluxo completo:
+
+1. Alterar temperatura, luminosidade, gas ou presenca no Wokwi.
+2. Verificar a atualizacao dos sensores no OLED e no dashboard Node-RED.
+3. Acionar luz da sala, luz do quarto, portao e alarme pelo dashboard.
+4. Confirmar que os comandos chegam ao ESP32 via MQTT e que os estados retornam ao Node-RED.
+5. Forcar uma regra de alerta, como temperatura maior ou igual a 35 graus, gas maior ou igual a 70% ou presenca com alarme ligado.
+6. Verificar o registro no Google Sheets e o envio de e-mail.
+
+As evidencias visuais estao na pasta `docs/prints/`:
+
+- `simulador-rodando.png`: simulacao do ESP32 em execucao.
+- `sistema-node-red.png`: fluxo geral no Node-RED.
+- `node-red-dashboard.png`: dashboard com sensores e controles.
+- `dash-node-red.png`: visualizacao dos dados no dashboard.
+- `registro-planilha.png`: dados registrados no Google Sheets.
+- `email-enviado.png`: e-mail de alerta/relatorio enviado.
+
+## 11. Conclusao
 
 O projeto atende aos requisitos principais da atividade ao combinar sensoriamento, atuacao, comunicacao MQTT bidirecional, dashboard Node-RED, registro em planilha e notificacao por e-mail. A arquitetura foi mantida simples para priorizar funcionamento no Wokwi e facilitar manutencao.
