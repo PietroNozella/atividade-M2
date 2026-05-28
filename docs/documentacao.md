@@ -19,8 +19,8 @@ O projeto implementa uma residencia inteligente simulada no Wokwi com ESP32 prog
 
 | Atuador | Funcao | Pino |
 | --- | --- | --- |
-| LED amarelo | Luz da sala | GPIO 25 |
-| LED azul | Luz do quarto | GPIO 26 |
+| Modulo rele 1 canal | Luz da sala | GPIO 25 |
+| Modulo rele 1 canal | Luz do quarto | GPIO 26 |
 | Servo motor | Portao | GPIO 18 |
 | Buzzer | Alarme sonoro | GPIO 19 |
 | OLED SSD1306 | Painel de status | SDA 21 / SCL 22 |

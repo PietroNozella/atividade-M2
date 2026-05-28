@@ -65,8 +65,8 @@ PIN_DHT = 27
 PIN_LDR = 34
 PIN_PIR = 13
 PIN_GAS = 35
-PIN_LED_SALA = 25
-PIN_LED_QUARTO = 26
+PIN_RELAY_SALA = 25
+PIN_RELAY_QUARTO = 26
 PIN_SERVO = 18
 PIN_BUZZER = 19
 PIN_OLED_SDA = 21
@@ -101,8 +101,8 @@ dht_sensor = dht.DHT22(Pin(PIN_DHT))
 ldr = ADC(Pin(PIN_LDR))
 gas = ADC(Pin(PIN_GAS))
 pir = Pin(PIN_PIR, Pin.IN)
-led_sala = Pin(PIN_LED_SALA, Pin.OUT)
-led_quarto = Pin(PIN_LED_QUARTO, Pin.OUT)
+relay_sala = Pin(PIN_RELAY_SALA, Pin.OUT)
+relay_quarto = Pin(PIN_RELAY_QUARTO, Pin.OUT)
 servo = PWM(Pin(PIN_SERVO))
 servo.freq(50)
 buzzer = PWM(Pin(PIN_BUZZER))
@@ -185,10 +185,10 @@ def definir_alarme(ligado):
 def aplicar_estado_atuador(nome, valor):
     if nome == "luz_sala":
         atuadores["luz_sala"] = valor
-        led_sala.value(1 if valor else 0)
+        relay_sala.value(1 if valor else 0)
     elif nome == "luz_quarto":
         atuadores["luz_quarto"] = valor
-        led_quarto.value(1 if valor else 0)
+        relay_quarto.value(1 if valor else 0)
     elif nome == "portao":
         atuadores["portao"] = "ABERTO" if valor else "FECHADO"
         definir_servo(90 if valor else 0)

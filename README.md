@@ -47,8 +47,8 @@ Sensores:
 
 Atuadores:
 
-- LED sala no GPIO 25.
-- LED quarto no GPIO 26.
+- Rele da sala no GPIO 25.
+- Rele do quarto no GPIO 26.
 - Servo do portão no GPIO 18.
 - Buzzer do alarme no GPIO 19.
 - OLED SSD1306 em I2C, SDA 21 e SCL 22.
